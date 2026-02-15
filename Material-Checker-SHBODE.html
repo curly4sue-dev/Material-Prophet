@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material-Gedächtnis | Goldstaub</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --card-bg: #2a2a2a; --gold: #d4af37; --text: #e0e0e0; }
+        body { background-color: var(--bg-color); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        h1 { color: var(--gold); border-bottom: 2px solid var(--gold); padding-bottom: 10px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
+        .subtitle { color: #888; margin-bottom: 20px; font-size: 0.9rem; letter-spacing: 1px; }
+        
+        .search-container { width: 100%; max-width: 800px; margin-bottom: 20px; }
+        #mainSearch { width: 100%; padding: 15px; background: #333; border: 2px solid var(--gold); color: white; border-radius: 10px; font-size: 1rem; box-sizing: border-box; outline: none; }
+
+        .action-bar { display: flex; gap: 15px; margin-bottom: 30px; width: 100%; max-width: 800px; }
+        .btn-action { flex: 1; background: var(--card-bg); border: 1px solid var(--gold); color: var(--gold); padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.8rem; text-transform: uppercase; }
+        .btn-action:hover { background: var(--gold); color: black; }
+
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; width: 100%; max-width: 800px; }
+        @media (max-width: 500px) { .grid { grid-template-columns: 1fr; } }
+        
+        .kachel { background-color: var(--card-bg); border: 1px solid #444; border-radius: 12px; padding: 25px 15px; cursor: pointer; transition: all 0.2s ease; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); min-height: 100px; display: flex; flex-direction: column; justify-content: center; }
+        .kachel:hover { transform: translateY(-3px); border-color: var(--gold); background-color: #333; }
+        .kachel h2 { color: var(--gold); margin: 0; font-size: 1rem; text-transform: uppercase; }
+        .kachel p { color: #888; font-size: 0.75rem; margin-top: 8px; }
+
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 50; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--card-bg); padding: 25px; border: 2px solid var(--gold); border-radius: 15px; z-index: 100; width: 95%; max-width: 750px; max-height: 85vh; overflow-y: auto; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border-bottom: 1px solid #444; padding: 10px 5px; text-align: left; font-size: 0.85rem; }
+        th { color: var(--gold); text-transform: uppercase; font-size: 0.7rem; }
+        
+        .edit-btn { background: none; border: 1px solid #666; color: #888; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
+        .close-btn { background: var(--gold); color: black; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; float: right; font-weight: bold; }
+        
+        input, select { width: 100%; padding: 12px; margin: 8px 0; background: #333; border: 1px solid #555; color: white; border-radius: 5px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+    <h1>MATERIAL-GEDÄCHTNIS</h1>
+    <div class="subtitle">PROJEKT GOLDSTAUB | MASTER-SYSTEM 2026</div>
+
+    <div class="search-container">
+        <input type="text" id="mainSearch" placeholder="Material, Art-Nr. oder Lieferant suchen..." onkeyup="filterMaterials()">
+    </div>
+
+    <div class="action-bar">
+        <button class="btn-action" onclick="openAddModal()">➕ NEU</button>
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="alert('Foto aufgenommen! Zur Auswertung bitte Ulrike im Chat schicken.')">
+        <button class="btn-action" onclick="document.getElementById('cameraInput').click()">📸 SCAN</button>
+    </div>
+
+    <div class="grid" id="mainGrid"></div>
+
+    <div class="overlay" id="overlay" onclick="closeAll()"></div>
+    
+    <div class="modal" id="detailView">
+        <button class="close-btn" onclick="closeAll()">X</button>
+        <h2 id="catTitle" style="color:var(--gold)">Kategorie</h2>
+        <table>
+            <thead><tr><th>Material</th><th>Art.Nr.</th><th>Lieferant</th><th></th></tr></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="modal" id="addModal">
+        <button class="close-btn" onclick="closeAll()">X</button>
+        <h2 style="color:var(--gold)">NEUER EINTRAG</h2>
+        <input type="text" id="newName" placeholder="Materialbezeichnung">
+        <input type="text" id="newArt" placeholder="Artikelnummer">
+        <input type="text" id="newLief" placeholder="Lieferant">
+        <select id="newCat">
+            <option value="0">Klebstoffe & Chemie</option>
+            <option value="1">Plattenware</option>
+            <option value="2">Leder & Bezug</option>
+            <option value="3">Polster & Pelotten</option>
+            <option value="4">Schleif- & Maschinen</option>
+            <option value="5">Kleinteile & Eisen</option>
+            <option value="6">Abdruck & Gips</option>
+            <option value="7">Büro & Orga</option>
+        </select>
+        <button class="btn-action" style="width:100%; margin-top:10px;" onclick="saveNewMaterial()">SPEICHERN</button>
+    </div>
+
+    <div class="modal" id="editModal">
+        <button class="close-btn" onclick="closeEdit()">X</button>
+        <h2 style="color:var(--gold)">BEARBEITEN</h2>
+        <input type="text" id="editName">
+        <input type="text" id="editArt">
+        <input type="text" id="editLief">
+        <button class="btn-action" style="width:100%; margin-top:10px;" id="saveEditBtn">ÄNDERUNGEN SPEICHERN</button>
+    </div>
+
+    <script>
+        let db = {
+            "kategorien": [
+                { "name": "🧪 Klebstoffe & Chemie", "artikel": [{"name": "Kontaktkleber KV-600", "art_nr": "KV-600", "lieferant": "Schuh-Service"}] },
+                { "name": "📐 Plattenware", "artikel": [
+                    {"name": "Kork-Weichbettung m. FS", "art_nr": "2474-251", "lieferant": "Springer"},
+                    {"name": "Nora Astro Light 6 mm", "art_nr": "200489", "lieferant": "BEUST"},
+                    {"name": "Savilux 2 mm", "art_nr": "84387", "lieferant": "Fräßmaterial"}
+                ]},
+                { "name": "👟 Leder & Bezug", "artikel": [{"name": "OnSteam Bezug", "art_nr": "84442-281", "lieferant": "Fräßmaterial"}] },
+                { "name": "🧽 Polster & Pelotten", "artikel": [{"name": "Spreizfußpelotte 12436", "art_nr": "12436", "lieferant": "Perpedes"}] },
+                { "name": "🎞️ Schleif- & Maschinen", "artikel": [{"name": "Schleifband K80", "art_nr": "SB-80", "lieferant": "Fachhandel"}] },
+                { "name": "🔨 Kleinteile & Eisen", "artikel": [{"name": "Zwirn schwarz", "art_nr": "ZW-BLK", "lieferant": "Meyer & Söhne"}] },
+                { "name": "👣 Abdruck & Gips", "artikel": [{"name": "Schaumabdruckkasten XL", "art_nr": "SAK-XL", "lieferant": "Eichenberger"}] },
+                { "name": "🖥️ Büro & Orga", "artikel": [{"name": "Thermoband 80mm", "art_nr": "TR-80-G", "lieferant": "Büro-Service"}] }
+            ]
+        };
+
+        function renderGrid() {
+            const grid = document.getElementById('mainGrid');
+            grid.innerHTML = '';
+            db.kategorien.forEach((cat, index) => {
+                const kachel = document.createElement('div');
+                kachel.className = 'kachel';
+                kachel.id = 'kachel-' + index;
+                kachel.innerHTML = `<h2>${cat.name}</h2><p>${cat.artikel.length} ARTIKEL</p>`;
+                kachel.onclick = () => showDetails(index);
+                grid.appendChild(kachel);
+            });
+        }
+
+        function filterMaterials() {
+            const term = document.getElementById('mainSearch').value.toLowerCase();
+            db.kategorien.forEach((cat, index) => {
+                const match = cat.artikel.some(a => a.name.toLowerCase().includes(term) || a.art_nr.toLowerCase().includes(term) || a.lieferant.toLowerCase().includes(term));
+                document.getElementById('kachel-' + index).style.opacity = (match || term === "") ? "1" : "0.2";
+            });
+        }
+
+        function showDetails(index) {
+            const cat = db.kategorien[index];
+            document.getElementById('catTitle').innerText = cat.name;
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            cat.artikel.forEach((art, artIdx) => {
+                tbody.innerHTML += `<tr><td>${art.name}</td><td>${art.art_nr}</td><td>${art.lieferant}</td>
+                <td><button class="edit-btn" onclick="event.stopPropagation(); openEdit(${index}, ${artIdx})">✎</button></td></tr>`;
+            });
+            document.getElementById('detailView').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+        }
+
+        function openAddModal() {
+            document.getElementById('addModal').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+        }
+
+        function saveNewMaterial() {
+            const n = document.getElementById('newName').value;
+            const a = document.getElementById('newArt').value;
+            const l = document.getElementById('newLief').value;
+            const c = document.getElementById('newCat').value;
+            if(n && a && l) {
+                db.kategorien[c].artikel.push({name: n, art_nr: a, lieferant: l});
+                renderGrid(); closeAll();
+                document.getElementById('newName').value = ''; document.getElementById('newArt').value = ''; document.getElementById('newLief').value = '';
+            } else { alert("Bitte alle Felder ausfüllen!"); }
+        }
+
+        function openEdit(catIdx, artIdx) {
+            const art = db.kategorien[catIdx].artikel[artIdx];
+            document.getElementById('editName').value = art.name;
+            document.getElementById('editArt').value = art.art_nr;
+            document.getElementById('editLief').value = art.lieferant;
+            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('saveEditBtn').onclick = () => {
+                db.kategorien[catIdx].artikel[artIdx] = {
+                    name: document.getElementById('editName').value,
+                    art_nr: document.getElementById('editArt').value,
+                    lieferant: document.getElementById('editLief').value
+                };
+                showDetails(catIdx); renderGrid(); closeEdit();
+            };
+        }
+
+        function closeEdit() { document.getElementById('editModal').style.display = 'none'; }
+        function closeAll() { 
+            document.getElementById('addModal').style.display = 'none';
+            document.getElementById('detailView').style.display = 'none';
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none'; 
+        }
+        renderGrid();
+    </script>
+</body>
+</html>
